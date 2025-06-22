@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Swal from "sweetalert2";
 
 const BACKEND_URL = "https://license-key-system.onrender.com";
 
@@ -8,9 +9,17 @@ export default function LoginPage() {
   const router = useRouter();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
 
   const handleLogin = async () => {
+    Swal.fire({
+      title: "กำลังตรวจสอบ...",
+      text: "กรุณารอสักครู่",
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading();
+      },
+    });
+
     const formData = new URLSearchParams();
     formData.append("username", username);
     formData.append("password", password);
@@ -24,11 +33,26 @@ export default function LoginPage() {
     if (res.ok) {
       const data = await res.json();
       localStorage.setItem("token", data.access_token);
+
+      Swal.fire({
+        icon: "success",
+        title: "Login สำเร็จ",
+        text: "คุณได้เข้าสู่ระบบเรียบร้อยแล้ว",
+        timerProgressBar: true,
+        showConfirmButton: false,
+        timer: 1500,
+      });
+
       router.push("/");
     } else {
       const data = await res.json();
-      setError(data.detail || "Login failed");
+      Swal.fire({
+        icon: "error",
+        title: "Login ไม่สำเร็จ",
+        text: data.detail || "กรุณาลองใหม่อีกครั้ง",
+      });
     }
+
   };
 
   return (
@@ -56,7 +80,6 @@ export default function LoginPage() {
           >
             Login
           </button>
-          {error && <div className="text-red-400 text-sm text-center">{error}</div>}
         </div>
       </div>
     </div>

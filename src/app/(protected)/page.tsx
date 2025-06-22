@@ -122,9 +122,13 @@ export default function Home() {
     router.push("/login");
   };
 
-  const filteredLicenses = licenses.filter((lic) =>
-    lic.license_key.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredLicenses = licenses.filter((lic) => {
+    const searchLower = search.toLowerCase();
+    return (
+      lic.license_key.toLowerCase().includes(searchLower) ||
+      (lic.active_system?.toLowerCase().includes(searchLower) ?? false)
+    );
+  });
   const totalPages = Math.ceil(filteredLicenses.length / pageSize);
   const displayedLicenses = filteredLicenses.slice(
     (currentPage - 1) * pageSize,
@@ -173,6 +177,7 @@ export default function Home() {
         title: 'สำเร็จ',
         text: 'อัพเดตจำนวน IP สำเร็จแล้ว',
         timer: 1500,
+        timerProgressBar: true,
         showConfirmButton: false,
       });
     } catch (error) {
@@ -270,10 +275,10 @@ export default function Home() {
 
             {/* ค้นหา License Key */}
             <div className="space-y-2">
-              <h2 className="text-xl font-semibold">ค้นหา License Key</h2>
+              <h2 className="text-xl font-semibold">ค้นหา License Key หรือ System</h2>
               <input
                 type="text"
-                placeholder="ค้นหา License Key"
+                placeholder="ค้นหา License Key หรือ System"
                 className="w-full px-3 py-1.5 rounded-md border border-gray-300 bg-white text-black shadow-sm focus:outline-none focus:ring-2 transition duration-200"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
