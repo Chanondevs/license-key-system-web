@@ -1,14 +1,25 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Swal from 'sweetalert2';
 
 type ActiveSystem = { id: number; system_name: string };
-type License = { license_key: string; active_system: string | null; create_at: string };
+type License = {
+  license_key: string;
+  active_system: string | null;
+  create_at: string;
+  ip_limit?: number | null;  // เพิ่ม ip_limit ที่อาจจะมีหรือไม่มี
+};
 
 const BACKEND_URL = "https://license-key-system.onrender.com";
 
 function isErrorWithName(err: unknown): err is { name: string } {
-  return typeof err === "object" && err !== null && "name" in err && typeof (err as { name?: unknown }).name === "string";
+  return (
+    typeof err === "object" &&
+    err !== null &&
+    "name" in err &&
+    typeof (err as { name?: unknown }).name === "string"
+  );
 }
 
 export default function Home() {
@@ -26,7 +37,6 @@ export default function Home() {
   const pageSize = 10;
 
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-
 
   const fetchWithAuth = (url: string, options: RequestInit = {}) => {
     return fetch(url, {
@@ -123,9 +133,62 @@ export default function Home() {
 
   useEffect(() => setCurrentPage(1), [search]);
 
+  const updateIpLimit = async (licenseKey: string, newLimit: string) => {
+    let limit: number | null = null;
+
+    if (newLimit.trim() !== "") {
+      const parsed = parseInt(newLimit, 10);
+      if (Number.isNaN(parsed) || parsed < 0) {
+        await Swal.fire({
+          icon: 'warning',
+          title: 'กรุณากรอกจำนวนที่ถูกต้อง',
+          text: 'กรุณากรอกจำนวนเต็มบวก หรือเว้นว่างไว้สำหรับไม่จำกัด',
+        });
+        return;
+      }
+      limit = parsed;
+    }
+
+    try {
+      const res = await fetchWithAuth(`${BACKEND_URL}/license_key/${licenseKey}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ip_limit: limit }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        await Swal.fire({
+          icon: 'error',
+          title: 'อัพเดตไม่สำเร็จ',
+          text: err?.detail || res.statusText,
+        });
+        return;
+      }
+
+      await loadData();
+
+      await Swal.fire({
+        icon: 'success',
+        title: 'สำเร็จ',
+        text: 'อัพเดตจำนวน IP สำเร็จแล้ว',
+        timer: 1500,
+        showConfirmButton: false,
+      });
+    } catch (error) {
+      console.error("เกิดข้อผิดพลาด:", error);
+      await Swal.fire({
+        icon: 'error',
+        title: 'เกิดข้อผิดพลาด',
+        text: 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้',
+      });
+    }
+  };
+
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-900 p-4">
-      <div className="bg-gray-800 text-white rounded-lg shadow-lg w-full max-w-4xl p-6 space-y-6">
+      <div className="bg-gray-800 text-white rounded-lg shadow-lg w-full max-w-5xl p-6 space-y-6">
         <div className="flex justify-between items-center">
           <h1 className="text-3xl font-bold">🔑 License Key System</h1>
           <button
@@ -182,10 +245,8 @@ export default function Home() {
             >
               {loadingGenerate ? "กำลังสร้าง..." : "สร้าง Key"}
             </button>
-
           </div>
         </div>
-
 
         {/* Skeleton Loading */}
         {loadingFetch ? (
@@ -226,36 +287,50 @@ export default function Home() {
                 <table className="min-w-full text-sm">
                   <thead className="bg-gray-900">
                     <tr>
-                      <th className="p-2 border">Key</th>
-                      <th className="p-2 border">System</th>
-                      <th className="p-2 border">Create At</th>
+                      <th className="p-2 border">Key</th><th className="p-2 border">System</th><th className="p-2 border">Create At</th><th className="p-2 border">IP Limit</th>
                     </tr>
                   </thead>
                   <tbody>
                     {displayedLicenses.length > 0 ? (
-                      displayedLicenses.map((lic) => (
-                        <tr key={lic.license_key} className="even:bg-gray-700">
-                          <td className="p-2 border">{lic.license_key}</td>
-                          <td className="p-2 border">{lic.active_system || "-"}</td>
-                          <td className="p-2 border">
-                            {new Date(lic.create_at).toLocaleString()}
-                          </td>
-                        </tr>
-                      ))
+                      displayedLicenses.map((lic) => {
+                        console.log(`🎫 License Render: ${lic.license_key}, ip_limit:`, lic.ip_limit);
+                        return (
+                          <tr key={lic.license_key} className="even:bg-gray-700">
+                            <td className="p-2 border">{lic.license_key}</td>
+                            <td className="p-2 border">{lic.active_system || "-"}</td>
+                            <td className="p-2 border">{new Date(lic.create_at).toLocaleString()}</td>
+                            <td className="p-2 border text-center">
+                              <input
+                                type="number"
+                                min={0}
+                                className="w-20 text-white rounded px-1 py-0.5"
+                                defaultValue={
+                                  lic.ip_limit !== null && lic.ip_limit !== undefined
+                                    ? lic.ip_limit.toString()
+                                    : ""
+                                }
+                                placeholder="ไม่จำกัด"
+                                onBlur={(e) => updateIpLimit(lic.license_key, e.target.value)}
+                              />
+                            </td>
+                          </tr>
+                        );
+                      })
                     ) : (
                       <tr>
-                        <td colSpan={3} className="text-center p-4 text-gray-400">
-                          ไม่พบข้อมูล
-                        </td>
+                        <td colSpan={4} className="text-center p-4 text-gray-400">ไม่พบข้อมูล</td>
                       </tr>
                     )}
                   </tbody>
+
                 </table>
               </div>
 
               {/* Pagination */}
               <div className="flex justify-between items-center text-sm mt-2">
-                <span>หน้า {currentPage} / {totalPages || 1}</span>
+                <span>
+                  หน้า {currentPage} / {totalPages || 1}
+                </span>
                 <div className="flex gap-2">
                   <button
                     className="px-3 py-1 border rounded disabled:opacity-50 cursor-pointer"
