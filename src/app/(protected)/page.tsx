@@ -2,9 +2,6 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Swal from 'sweetalert2';
-import { SpeedInsights } from "@vercel/speed-insights/next"
-
-<SpeedInsights/>
 
 type ActiveSystem = { id: number; system_name: string };
 type License = {

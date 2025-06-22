@@ -2,9 +2,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Swal from "sweetalert2";
-import { SpeedInsights } from "@vercel/speed-insights/next"
-
-<SpeedInsights />
 
 const BACKEND_URL = "https://license-key-system.onrender.com";
 

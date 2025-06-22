@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Kanit } from "next/font/google";
 import "./globals.css";
+import { SpeedInsights } from '@vercel/speed-insights/next';
 
 const kanit = Kanit({
   subsets: ['latin'], // หรือ 'thai' ก็ได้ถ้ามี
@@ -21,6 +22,7 @@ export default function RootLayout({
   return (
     <html lang="th" className={kanit.variable}>
       <body className="font-kanit">{children}</body>
+      <SpeedInsights />
     </html>
   );
 }
